@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0b0d12">
+<meta name="description" content="A portable skill routes coding agents to focused techniques before, during, and after implementation. An interactive HTML artifact lets a person make the key choices.">
+<title>agent-unknowns — agent tools by Lucas Araujo</title>
+<link rel="stylesheet" href="./site.css">
+</head>
+<body style="--accent:#d5f39e;--ink:#354d10">
+<header class="top">
+<div class="wrap">
+<a class="brand" href="./">lucas<span>/</span>agent-unknowns</a>
+<nav class="nav" aria-label="Main navigation">
+<a href="#how">How it works</a>
+<a href="https://github.com/lucasaraujonrt/agent-unknowns/blob/main/README.md">README</a>
+<a href="https://github.com/lucasaraujonrt/agent-unknowns">GitHub ↗</a>
+</nav>
+</div>
+</header>
+<main>
+<div class="wrap">
+<section class="hero">
+<div>
+<span class="eyebrow">05 / AGENT THINKING TOOL</span>
+<h1>Find the unknowns before they become rework.</h1>
+<p class="lead">A portable skill routes coding agents to focused techniques before, during, and after implementation. An interactive HTML artifact lets a person make the key choices.</p>
+<div class="actions">
+<a class="button" href="#how">Explore the flow <span aria-hidden="true">↓</span>
+</a>
+<a class="button secondary" href="https://github.com/lucasaraujonrt/agent-unknowns">View source <span aria-hidden="true">↗</span>
+</a>
+<a class="button secondary" href="./demo.html">Open the HTML demo <span aria-hidden="true">↗</span>
+</a>
+</div>
+</div>
+<aside class="hero-side" aria-label="Project details">
+<p>Built for coding agents. The page shows the contract and a synthetic flow; the repository contains the implementation.</p>
+<span class="tag">Portable skill</span>
+<span class="tag">11 techniques</span>
+<span class="tag">Interactive HTML</span>
+</aside>
+</section>
+</div>
+<hr class="rule">
+<section class="section wrap">
+<div class="section-head">
+<span class="section-label">THE IDEA</span>
+<div>
+<h2>What does the skill change?</h2>
+<p class="section-intro">An agent can inspect the code, identify an unanswered assumption, and present a compact decision surface. The person’s selections become a reply for the agent to act on.</p>
+</div>
+</div>
+<div class="cards">
+<article class="card">
+<span class="index">01</span>
+<h3>Route by phase</h3>
+<p>The skill chooses one of eleven techniques based on the work and its dominant uncertainty.</p>
+</article>
+<article class="card">
+<span class="index">02</span>
+<h3>Ground in evidence</h3>
+<p>References tell the agent to inspect available code and distinguish fact from assumption.</p>
+</article>
+<article class="card">
+<span class="index">03</span>
+<h3>Close the loop</h3>
+<p>Choice chips and a reply builder turn review into a concrete next action.</p>
+</article>
+</div>
+</section>
+<hr class="rule">
+<section class="section wrap" id="how">
+<div class="section-head">
+<span class="section-label">STATE WALKTHROUGH</span>
+<div>
+<h2>See the states an agent handles.</h2>
+<p class="section-intro">Select a step to inspect a possible state. Every value here is fictional.</p>
+</div>
+</div>
+<div class="demo">
+<div class="demo-nav" role="group" aria-label="Example flow steps">
+<button class="demo-step" type="button" aria-pressed="false" data-state="grounded" data-output="{&quot;evidence&quot;:&quot;queue worker and tests&quot;,&quot;unknown&quot;:&quot;retry behavior&quot;}">
+<span class="num">01</span>Inspect</button>
+<button class="demo-step" type="button" aria-pressed="false" data-state="selected" data-output="{&quot;technique&quot;:&quot;blindspot-pass&quot;,&quot;phase&quot;:&quot;before implementation&quot;}">
+<span class="num">02</span>Route</button>
+<button class="demo-step" type="button" aria-pressed="false" data-state="choices made" data-output="{&quot;choice&quot;:&quot;verify provider state first&quot;,&quot;source&quot;:&quot;synthetic demo&quot;}">
+<span class="num">03</span>Review</button>
+<button class="demo-step" type="button" aria-pressed="false" data-state="ready" data-output="{&quot;next&quot;:&quot;send the selected decision back to the agent&quot;}">
+<span class="num">04</span>Reply</button>
+</div>
+<div class="demo-view">
+<div class="demo-top">
+<span class="demo-caption">Example output</span>
+<span class="pill" id="demo-state" aria-live="polite">
+</span>
+</div>
+<pre id="demo-output" aria-live="polite">
+</pre>
+<p class="demo-note">Synthetic example. No provider call, charge, or data write occurs on this page.</p>
+</div>
+</div>
+</section>
+<section class="wrap" style="padding-bottom:84px">
+<div class="boundary">
+<span class="section-label">THE BOUNDARY</span>
+<p>The HTML runs locally and does not execute project code or contact a service. The bundled retry scenario is fictional; the skill is a community adaptation, not an Anthropic release.</p>
+</div>
+</section>
+<section class="end">
+<div class="wrap">
+<h2>See the implementation and its limits.</h2>
+<a class="button" href="https://github.com/lucasaraujonrt/agent-unknowns/blob/main/docs/design.md">Read the design and privacy model ↗</a>
+</div>
+</section>
+</main>
+<footer class="footer">
+<div class="wrap">
+<span>Open source by Lucas Araujo · agent-unknowns</span>
+<span>
+<a href="https://github.com/lucasaraujonrt/agent-unknowns">Source</a> · <a href="https://github.com/lucasaraujonrt/agent-unknowns/blob/main/README.md">Setup</a> · <a href="https://github.com/lucasaraujonrt/agent-unknowns/blob/main/LICENSE">License</a>
+</span>
+<p>Inspired by Thariq Shihipar’s <a href="https://claude.com/blog/a-field-guide-to-claude-fable-finding-your-unknowns">field guide to unknowns</a> and <a href="https://claude.com/blog/using-claude-code-the-unreasonable-effectiveness-of-html">article on HTML for agents</a>. Independent community adaptation.</p>
+</div>
+</footer>
+<script src="./site.js" defer>
+</script>
+</body>
+</html>
