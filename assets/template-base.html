@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Unknowns — Queue retry decision</title>
+<meta name="kind" content="unknowns">
+<style>
+:root {
+  --bg: #0a0a0a; --bg-card: #141414; --bg-card-hover: #1a1a1a; --bg-code: #0f0f0f;
+  --border: #262626; --border-strong: #404040;
+  --text: #fafafa; --text-muted: #737373; --text-subtle: #a3a3a3;
+  --accent: #8b5cf6;
+  --success: #22c55e; --warning: #f59e0b; --error: #ef4444; --info: #60a5fa;
+}
+[data-theme="light"] {
+  --bg: #fafafa; --bg-card: #ffffff; --bg-card-hover: #f5f5f5; --bg-code: #f5f5f5;
+  --border: #e5e5e5; --border-strong: #d4d4d4;
+  --text: #171717; --text-muted: #737373; --text-subtle: #525252;
+  --accent: #6d28d9;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: var(--bg); color: var(--text); font-family: system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+body { line-height: 1.6; padding: 32px 28px 100px; max-width: 1180px; margin: 0 auto; }
+code, pre { font-family: ui-monospace, monospace; font-size: 13px; }
+pre { background: var(--bg-code); border: 1px solid var(--border); padding: 14px 18px; border-radius: 10px; overflow-x: auto; line-height: 1.65; margin: 12px 0; }
+code { background: var(--bg-code); padding: 1px 6px; border-radius: 4px; font-size: 12px; border: 1px solid var(--border); }
+pre code { background: none; padding: 0; border: none; }
+.serif { font-family: Georgia, serif; font-style: italic; font-weight: 400; }
+.mono { font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+.top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+.brand { display: flex; align-items: center; gap: 12px; }
+.brand .logo { font-weight: 700; font-size: 22px; letter-spacing: -0.04em; }
+.brand .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 12px var(--accent); }
+.theme-toggle { background: var(--bg-card); border: 1px solid var(--border); color: var(--text); padding: 6px 12px; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 13px; }
+.theme-toggle:hover { background: var(--bg-card-hover); }
+.hero { padding: 28px 32px 26px; border: 1px solid var(--border); border-radius: 16px; margin-bottom: 28px; background: var(--bg-card); position: relative; overflow: hidden; }
+.hero::after { content: ''; position: absolute; top: -120px; right: -120px; width: 480px; height: 480px; background: radial-gradient(circle, rgba(139,92,246,0.08) 0%, transparent 70%); pointer-events: none; }
+.hero h1 { font-size: 30px; line-height: 1.15; margin-bottom: 8px; font-weight: 600; letter-spacing: -0.02em; position: relative; z-index: 1; }
+.hero p { font-size: 14px; color: var(--text-subtle); position: relative; z-index: 1; max-width: 640px; }
+section { margin-bottom: 36px; }
+h1, h2, h3, h4 { letter-spacing: -0.01em; }
+h2 { font-size: 22px; font-weight: 600; margin: 0 0 4px; }
+h2 .serif { color: var(--accent); font-size: 25px; }
+h2 .count { color: var(--text-muted); font-weight: 500; font-size: 15px; }
+.section-hint { font-size: 12px; color: var(--text-muted); margin-bottom: 14px; }
+p { font-size: 14px; color: var(--text-subtle); }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* primitive: chip-toggle */
+.chip-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 16px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 100px; font-size: 13px; font-weight: 500; border: 1px solid var(--border); background: var(--bg-card); color: var(--text-subtle); cursor: pointer; transition: all .15s ease; user-select: none; }
+.chip:hover { border-color: var(--border-strong); color: var(--text); }
+.chip .n { font-size: 11px; color: var(--text-muted); }
+.chip.on { color: var(--text); border-color: var(--border-strong); background: var(--bg-card-hover); }
+.chip.steal.on { color: var(--success); border-color: rgba(34,197,94,0.4); background: rgba(34,197,94,0.1); }
+.chip.skip.on { color: var(--error); border-color: rgba(239,68,68,0.4); background: rgba(239,68,68,0.1); }
+.chip.neutro.on { color: var(--accent); border-color: rgba(139,92,246,0.4); background: rgba(139,92,246,0.1); }
+
+/* primitive: copy-btn */
+.copy-btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 13px; border-radius: 8px; font-size: 12px; font-weight: 500; font-family: inherit; border: 1px solid var(--border); background: var(--bg-card); color: var(--text-subtle); cursor: pointer; transition: all .15s ease; white-space: nowrap; }
+.copy-btn:hover { border-color: var(--border-strong); color: var(--text); }
+.copy-btn.copied { color: var(--success); border-color: rgba(34,197,94,0.4); background: rgba(34,197,94,0.08); }
+.copy-btn.final { padding: 10px 18px; font-size: 13px; background: var(--accent); border-color: var(--accent); color: #fff; }
+.copy-btn.final:hover { opacity: .9; }
+.copy-btn.final.copied { background: var(--success); border-color: var(--success); color: #fff; }
+.card-copy-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+
+/* primitive: reply-builder */
+.reply { border: 1px solid var(--border); border-radius: 12px; background: var(--bg-card); padding: 18px 20px; margin: 12px 0; }
+.reply .label { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); font-weight: 600; margin-bottom: 8px; }
+.reply .prose { font-size: 14px; color: var(--text); line-height: 1.7; min-height: 24px; }
+.reply .prose .next-action { color: var(--accent); font-weight: 600; }
+.reply .prose .placeholder { color: var(--text-muted); font-style: italic; }
+.reply-actions { display: flex; justify-content: flex-end; margin-top: 14px; }
+.sticky-footer { position: fixed; left: 0; right: 0; bottom: 0; background: var(--bg-card); border-top: 1px solid var(--border); padding: 12px 28px; display: flex; align-items: center; justify-content: space-between; gap: 16px; z-index: 50; backdrop-filter: blur(8px); }
+.sticky-footer .hint { font-size: 12px; color: var(--text-muted); }
+.sticky-footer .hint strong { color: var(--text-subtle); }
+
+/* primitive: gate */
+.gate-card { border: 1px solid var(--border); border-radius: 14px; background: var(--bg-card); padding: 20px 22px; margin-bottom: 14px; }
+.gate-q { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 12px; }
+.gate-opts { display: flex; flex-direction: column; gap: 8px; }
+.opt { text-align: left; border: 1px solid var(--border); background: var(--bg-code); color: var(--text-subtle); padding: 10px 14px; border-radius: 8px; font-size: 13px; font-family: inherit; cursor: pointer; transition: all .15s ease; }
+.opt:hover { border-color: var(--border-strong); }
+.opt.sel-wrong { border-color: rgba(239,68,68,0.5); background: rgba(239,68,68,0.08); color: var(--error); }
+.opt.reveal-right { border-color: rgba(34,197,94,0.5); background: rgba(34,197,94,0.08); color: var(--success); }
+.opt.disabled { pointer-events: none; opacity: .7; }
+.gate-pointer { font-size: 12px; color: var(--error); margin-top: 8px; display: none; }
+.gate-pointer.show { display: block; }
+.gate-banner { display: none; align-items: center; justify-content: space-between; gap: 12px; border: 1px solid rgba(34,197,94,0.35); background: rgba(34,197,94,0.08); color: var(--success); border-radius: 10px; padding: 12px 18px; font-size: 13px; font-weight: 600; margin-top: 8px; }
+.gate-banner.show { display: flex; }
+.gate-reset { background: none; border: 1px solid var(--border); color: var(--text-muted); padding: 5px 11px; border-radius: 8px; font-size: 12px; cursor: pointer; font-family: inherit; }
+.gate-reset:hover { border-color: var(--border-strong); color: var(--text); }
+
+/* primitive: details-collapse */
+details.mech { border: 1px solid var(--border); border-radius: 10px; background: var(--bg-card); margin: 10px 0; overflow: hidden; }
+details.mech summary { padding: 12px 16px; cursor: pointer; font-size: 13px; font-weight: 500; color: var(--text-subtle); list-style: none; display: flex; align-items: center; gap: 8px; }
+details.mech summary::-webkit-details-marker { display: none; }
+details.mech summary::before { content: '▸'; color: var(--accent); transition: transform .15s ease; font-size: 11px; }
+details.mech[open] summary::before { transform: rotate(90deg); }
+details.mech .mech-body { padding: 0 16px 16px; font-size: 13px; color: var(--text-subtle); }
+details.mech summary .tag { margin-left: auto; font-size: 11px; color: var(--text-muted); }
+
+/* primitive: filter-chips */
+.filter-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+.fchip { padding: 7px 14px; border-radius: 100px; font-size: 12px; font-weight: 600; border: 1px solid var(--border); background: var(--bg-card); color: var(--text-muted); cursor: pointer; transition: all .15s ease; }
+.fchip:hover { color: var(--text-subtle); }
+.fchip.active { color: var(--accent); border-color: rgba(139,92,246,0.4); background: rgba(139,92,246,0.08); }
+.filtered-block { border: 1px solid var(--border); border-radius: 12px; background: var(--bg-card); padding: 16px 18px; margin-bottom: 10px; }
+.filtered-block h4 { font-size: 14px; margin-bottom: 4px; }
+.filtered-block p { margin: 0; }
+
+footer.page-footer { margin-top: 50px; padding-top: 20px; border-top: 1px solid var(--border); font-size: 12px; color: var(--text-muted); display: flex; justify-content: space-between; }
+</style>
+</head>
+<body>
+
+<div class="top">
+  <div class="brand">
+    <span class="dot"></span>
+    <span class="logo">agent<span class="serif">·</span>unknowns</span>
+  </div>
+  <button class="theme-toggle" onclick="document.documentElement.dataset.theme = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light'">◐ theme</button>
+</div>
+
+<div class="hero">
+  <h1>Queue retry decision</h1>
+  <p>Synthetic example: choose a recovery policy before changing a background worker. Replace this content when creating a real artifact.</p>
+</div>
+
+<section>
+  <h2><span class="serif">1.</span> Choice chips <span class="count">— single and multiple selection</span></h2>
+  <p class="section-hint">Choose one recovery policy and any constraints that should shape it.</p>
+
+  <div class="chip-row" data-chipgroup="single" data-mode="single">
+    <button class="chip on" aria-pressed="true" data-value="idempotent" data-reply="an idempotency key for retries">Retry with an idempotency key</button>
+    <button class="chip" aria-pressed="false" data-value="reconcile" data-reply="manual reconciliation after uncertain outcomes">Reconcile uncertain outcomes</button>
+    <button class="chip" aria-pressed="false" data-value="pause" data-reply="pausing automatic retries">Pause automatic retries</button>
+  </div>
+
+  <div class="chip-row" data-chipgroup="constraints" data-mode="multi">
+    <button class="chip steal" aria-pressed="false" data-value="timeout" data-reply="a timeout may follow a successful provider call">Timeout may hide success</button>
+    <button class="chip skip" aria-pressed="false" data-value="status" data-reply="the provider has no status endpoint">No status endpoint</button>
+    <button class="chip neutro" aria-pressed="false" data-value="limit" data-reply="the operation has a spend limit">Spend limit applies</button>
+  </div>
+</section>
+
+<section>
+  <h2><span class="serif">2.</span> Reply builder <span class="count">— updates as choices change</span></h2>
+  <p class="section-hint">Copy the result back to your coding agent.</p>
+
+  <div class="reply">
+    <div class="label">your response</div>
+    <div class="prose" id="reply-prose" aria-live="polite">
+      <span class="placeholder">Choose a policy to build a response.</span>
+    </div>
+    <div class="reply-actions">
+      <button class="copy-btn final" data-copy-target="reply-prose" onclick="copyBtn(this)">copy response</button>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2><span class="serif">3.</span> Copy buttons <span class="count">— individual finding or final prompt</span></h2>
+  <p class="section-hint">This finding is illustrative. Replace it with a verified file reference in a real review.</p>
+
+  <div class="filtered-block">
+    <div class="card-copy-row">
+      <p>“A network timeout does not prove that the provider rejected the request.” <span id="card-text-1" style="display:none">A network timeout does not prove that the provider rejected the request.</span></p>
+      <button class="copy-btn" data-copy-target="card-text-1" onclick="copyBtn(this)">copy</button>
+    </div>
+  </div>
+
+  <div class="card-copy-row" style="margin-top:14px">
+    <span class="mono" style="color:var(--text-muted)">prompt for the next step</span>
+    <button class="copy-btn final" data-copy-value="Inspect the queue worker and add a provider-state check before retrying uncertain requests." onclick="copyBtn(this)">copy prompt</button>
+  </div>
+</section>
+
+<section>
+  <h2><span class="serif">4.</span> Knowledge check <span class="count">— understanding, not authorization</span></h2>
+  <p class="section-hint">A wrong answer points to an explanation. Passing this check never grants permission to deploy or spend.</p>
+
+  <div id="gate-root" data-total="2">
+    <div class="gate-card" data-q="1">
+      <div class="gate-q">1. What does a request timeout establish?</div>
+      <div class="gate-opts">
+        <button class="opt" data-correct="false">The provider rejected the request</button>
+        <button class="opt" data-correct="true">The outcome is unknown until checked</button>
+        <button class="opt" data-correct="false">The request was never sent</button>
+      </div>
+      <div class="gate-pointer">↳ Read <a href="#sec-retry">the timeout note</a> and try again.</div>
+    </div>
+
+    <div class="gate-card" data-q="2">
+      <div class="gate-q">2. What should happen before retrying an uncertain paid job?</div>
+      <div class="gate-opts">
+        <button class="opt" data-correct="true">Check provider state and reconcile the result</button>
+        <button class="opt" data-correct="false">Submit a new request immediately</button>
+      </div>
+      <div class="gate-pointer">↳ Read <a href="#sec-reconcile">the recovery note</a> and try again.</div>
+    </div>
+
+    <div class="gate-banner" id="gate-banner" aria-live="polite">
+      <span>✓ Understanding checked <span id="gate-progress">0/2</span></span>
+      <button class="gate-reset" onclick="resetGate()">reset</button>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2><span class="serif">5.</span> Collapsible detail <span class="count">— deeper explanation on demand</span></h2>
+  <p class="section-hint">Keep the first read short without hiding material constraints.</p>
+
+  <details class="mech" id="sec-retry">
+    <summary>Why a timeout is ambiguous <span class="tag">failure mode</span></summary>
+    <div class="mech-body">
+      <p>The provider may have accepted the request before the connection failed. Retrying blindly may duplicate work or charges.</p>
+    </div>
+  </details>
+
+  <details class="mech" id="sec-reconcile">
+    <summary>What reconciliation means <span class="tag">recovery</span></summary>
+    <div class="mech-body">
+      <p>Look up the provider request ID or other durable evidence, record the actual outcome, then decide whether a new request is needed.</p>
+    </div>
+  </details>
+</section>
+
+<section>
+  <h2><span class="serif">6.</span> Filters <span class="count">— narrow a longer review</span></h2>
+  <p class="section-hint">Only cards with a category participate in filtering.</p>
+
+  <div class="filter-row" data-filtergroup="cat">
+    <button class="fchip active" aria-pressed="true" data-filter="all">All <span class="mono">4</span></button>
+    <button class="fchip" aria-pressed="false" data-filter="finding">Findings <span class="mono">2</span></button>
+    <button class="fchip" aria-pressed="false" data-filter="decision">Decisions <span class="mono">2</span></button>
+  </div>
+
+  <div class="filtered-block" data-cat="finding">
+    <h4>Finding — timeout after dispatch</h4>
+    <p>The worker records a timeout but may already have sent the provider request.</p>
+  </div>
+  <div class="filtered-block" data-cat="finding">
+    <h4>Finding — no replay key</h4>
+    <p>The example request has no stable idempotency key yet.</p>
+  </div>
+  <div class="filtered-block" data-cat="decision">
+    <h4>Decision — recovery policy</h4>
+    <p>Choose automatic idempotent retry or manual reconciliation.</p>
+  </div>
+  <div class="filtered-block" data-cat="decision">
+    <h4>Decision — spend bound</h4>
+    <p>Set a maximum charge before any retry policy is enabled.</p>
+  </div>
+</section>
+
+<div class="sticky-footer">
+  <span class="hint"><strong>paste into your agent chat</strong> — the response above includes the next step</span>
+  <button class="copy-btn final" data-copy-target="reply-prose" onclick="copyBtn(this)">copy response</button>
+</div>
+
+<footer class="page-footer">
+  <span>agent-unknowns · synthetic template</span>
+  <span class="mono">adapt this file for your project</span>
+</footer>
+
+<script>
+function copyLegacy(text) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  ta.select();
+  let ok = false;
+  try { ok = document.execCommand('copy'); } finally { document.body.removeChild(ta); }
+  return ok;
+}
+
+function copyToClipboard(text) {
+  if (navigator.clipboard && window.isSecureContext) {
+    return navigator.clipboard.writeText(text).catch(() =>
+      copyLegacy(text) ? Promise.resolve() : Promise.reject(new Error('copy blocked'))
+    );
+  }
+  return copyLegacy(text) ? Promise.resolve() : Promise.reject(new Error('copy blocked'));
+}
+
+function selectContents(el) {
+  const range = document.createRange();
+  range.selectNodeContents(el);
+  const sel = window.getSelection();
+  if (sel) {
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }
+}
+
+function copyBtn(btn) {
+  let text = btn.dataset.copyValue;
+  const target = btn.dataset.copyTarget ? document.getElementById(btn.dataset.copyTarget) : null;
+  if (!text && target) text = target.textContent;
+  const original = btn.textContent;
+  copyToClipboard(text || '').then(() => {
+    btn.classList.add('copied');
+    btn.textContent = 'copied ✓';
+    setTimeout(() => { btn.classList.remove('copied'); btn.textContent = original; }, 1600);
+  }).catch(() => {
+    if (target) selectContents(target);
+    btn.textContent = 'selected — copy manually';
+    setTimeout(() => { btn.textContent = original; }, 2600);
+  });
+}
+
+document.querySelectorAll('.chip-row').forEach(row => {
+  const mode = row.dataset.mode;
+  row.querySelectorAll('.chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      if (mode === 'single') {
+        row.querySelectorAll('.chip').forEach(c => { c.classList.remove('on'); c.setAttribute('aria-pressed', 'false'); });
+        chip.classList.add('on');
+        chip.setAttribute('aria-pressed', 'true');
+      } else {
+        chip.classList.toggle('on');
+        chip.setAttribute('aria-pressed', String(chip.classList.contains('on')));
+      }
+      buildReply();
+    });
+  });
+});
+
+function buildReply() {
+  const single = document.querySelector('[data-chipgroup="single"] .chip.on');
+  const constraints = Array.from(document.querySelectorAll('[data-chipgroup="constraints"] .chip.on')).map(c => c.dataset.reply);
+  const out = document.getElementById('reply-prose');
+
+  if (!single && constraints.length === 0) {
+    out.textContent = 'Choose a policy to build a response.';
+    return;
+  }
+
+  const policy = single ? `I prefer ${single.dataset.reply}.` : '';
+  const considerations = constraints.length ? `Account for ${constraints.join('; ')}.` : '';
+  out.textContent = [policy, considerations, 'Next: inspect the queue worker and implement the selected recovery policy.'].filter(Boolean).join(' ');
+}
+
+buildReply();
+
+const gateRoot = document.getElementById('gate-root');
+const gateState = {};
+if (gateRoot) {
+  gateRoot.querySelectorAll('.gate-card').forEach(card => {
+    const q = card.dataset.q;
+    card.querySelectorAll('.opt').forEach(opt => {
+      opt.addEventListener('click', () => {
+        if (opt.dataset.correct === 'true') {
+          card.querySelectorAll('.opt').forEach(o => o.classList.add('disabled'));
+          opt.classList.add('reveal-right');
+          card.querySelector('.gate-pointer')?.classList.remove('show');
+          gateState[q] = true;
+        } else {
+          card.querySelectorAll('.opt').forEach(o => o.classList.remove('sel-wrong'));
+          opt.classList.add('sel-wrong');
+          card.querySelector('.gate-pointer')?.classList.add('show');
+          gateState[q] = false;
+        }
+        updateGateBanner();
+      });
+    });
+  });
+}
+
+function updateGateBanner() {
+  const total = parseInt(gateRoot.dataset.total, 10);
+  const cleared = Object.values(gateState).filter(Boolean).length;
+  const banner = document.getElementById('gate-banner');
+  document.getElementById('gate-progress').textContent = `${cleared}/${total}`;
+  banner.classList.toggle('show', cleared === total);
+}
+
+function resetGate() {
+  Object.keys(gateState).forEach(k => delete gateState[k]);
+  gateRoot.querySelectorAll('.opt').forEach(o => o.classList.remove('sel-wrong', 'reveal-right', 'disabled'));
+  gateRoot.querySelectorAll('.gate-pointer').forEach(p => p.classList.remove('show'));
+  document.getElementById('gate-banner').classList.remove('show');
+  document.getElementById('gate-progress').textContent = `0/${gateRoot.dataset.total}`;
+}
+
+document.querySelectorAll('.filter-row').forEach(row => {
+  row.querySelectorAll('.fchip').forEach(fchip => {
+    fchip.addEventListener('click', () => {
+      row.querySelectorAll('.fchip').forEach(f => { f.classList.remove('active'); f.setAttribute('aria-pressed', 'false'); });
+      fchip.classList.add('active');
+      fchip.setAttribute('aria-pressed', 'true');
+      const filter = fchip.dataset.filter;
+      document.querySelectorAll('.filtered-block[data-cat]').forEach(block => {
+        block.style.display = (filter === 'all' || block.dataset.cat === filter) ? '' : 'none';
+      });
+    });
+  });
+});
+</script>
+
+</body>
+</html>

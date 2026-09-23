@@ -1,0 +1,5 @@
+node_modules/
+.unknowns/
+.env*
+coverage/
+.DS_Store
